@@ -7,10 +7,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.Response;
-
 import java.io.IOException;
-import java.sql.PreparedStatement;
+
 
 @RestController
 public class S3Controller {
@@ -21,6 +19,7 @@ public class S3Controller {
     @PostMapping("/upload")
     public ResponseEntity<String> upload(@RequestParam("file")MultipartFile file) throws IOException{
         s3Service.uploadFile(file);
+        //s3Service.uploadFileLocal(file);
         return ResponseEntity.ok("File Uploaded Successfully");
     }
 
