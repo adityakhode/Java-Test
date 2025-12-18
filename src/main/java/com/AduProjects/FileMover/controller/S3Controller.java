@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 
 
@@ -16,11 +17,21 @@ public class S3Controller {
     @Autowired
     private S3Service s3Service;
 
+    private static SseEmitter sseEmitter;
+
     @PostMapping("/upload")
     public ResponseEntity<String> upload(@RequestParam("file")MultipartFile file) throws IOException{
-        s3Service.uploadFile(file);
-        //s3Service.uploadFileLocal(file);
+        sseEmitter = new SseEmitter();
+        s3Service.uploadFile(file, sseEmitter);
         return ResponseEntity.ok("File Uploaded Successfully");
+    }
+
+    @GetMapping("/progress")
+    public SseEmitter progress() {
+        if (sseEmitter == null) {
+            sseEmitter = new SseEmitter();
+        }
+        return sseEmitter;
     }
 
     @GetMapping("/download/{filename}")

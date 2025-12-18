@@ -2,7 +2,6 @@ package com.AduProjects.FileMover.service;
 
 import java.io.File;
 import java.io.InputStream;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -13,8 +12,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-
 import java.io.IOException;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public class S3Service {
@@ -25,7 +24,7 @@ public class S3Service {
     @Value("${aws.bucket.name}")
     private String bucketName;
 
-    public void uploadFile(MultipartFile file) throws IOException {
+    public void uploadFile(MultipartFile file, SseEmitter emitter) throws IOException {
 
         long totalSize = file.getSize();
 
@@ -34,7 +33,11 @@ public class S3Service {
                 originalStream,
                 uploadedBytes -> {
                     int progress = (int) ((uploadedBytes * 100) / totalSize);
-                    System.out.println("Uploaded: " + progress + "%");
+                    try {
+                        emitter.send("Uploaded: " + progress + "%");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
         );
 
@@ -51,10 +54,13 @@ public class S3Service {
                 requestBody
         );
 
-        System.out.println("Upload complete!");
+        try {
+            emitter.send("Upload complete!");
+            emitter.complete();
+        } catch (IOException e) {
+            emitter.completeWithError(e);
+        }
     }
-
-
 
     public byte[] downloadFile(String key) {
         ResponseBytes<GetObjectResponse> objectAsByte = s3Client.getObjectAsBytes(
@@ -85,6 +91,5 @@ public class S3Service {
 
         System.out.println("File saved to: " + localFile.getAbsolutePath());
     }
-
 
 }

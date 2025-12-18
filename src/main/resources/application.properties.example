@@ -1,0 +1,6 @@
+spring.application.name=FileMover
+
+cloud.aws.credentials.assess-key=YOUR_ACCESS_KEY
+cloud.aws.credentials.secret-key=YOUR_SECRET_KEY
+cloud.aws.region.static=YOUR_REGION
+aws.bucket.name=YOUR_BUCKET_NAME

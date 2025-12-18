@@ -13,5 +13,50 @@
     <button type="submit">Upload</button>
 </form>
 
+<!-- Realtime upload progress label -->
+<div id="progressContainer" style="margin-top:12px; font-family:Arial, sans-serif;">
+    <label for="uploadProgress"><strong>Upload progress:</strong></label>
+    <span id="uploadProgress">0%</span>
+</div>
+
+<script>
+const eventSource = new EventSource('/progress');
+
+eventSource.onmessage = function(event) {
+    document.getElementById('uploadProgress').textContent = event.data;
+};
+
+eventSource.onerror = function(event) {
+    console.error('SSE error:', event);
+};
+
+document.getElementById('uploadForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const fileInput = form.querySelector('input[type=file]');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) return;
+
+    const formData = new FormData();
+    formData.append(fileInput.name, fileInput.files[0]);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', form.action);
+
+    xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+            // Upload completed
+        } else {
+            document.getElementById('uploadProgress').textContent = 'Upload failed';
+        }
+    };
+
+    xhr.onerror = function() {
+        document.getElementById('uploadProgress').textContent = 'Upload error';
+    };
+
+    xhr.send(formData);
+});
+</script>
+
 </body>
 </html>
