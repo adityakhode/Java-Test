@@ -33,6 +33,7 @@ public class S3Service {
                 originalStream,
                 uploadedBytes -> {
                     int progress = (int) ((uploadedBytes * 100) / totalSize);
+                    System.out.println("Uploaded: " + progress + "%");
                     try {
                         emitter.send("Uploaded: " + progress + "%");
                     } catch (IOException e) {

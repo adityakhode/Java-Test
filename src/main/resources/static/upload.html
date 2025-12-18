@@ -1,61 +1,151 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>File Upload to S3</title>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<h2>Upload File to S3</h2>-->
+
+<!--<form id="uploadForm" method="post" enctype="multipart/form-data" action="/upload">-->
+<!--    <input type="file" name="file" required>-->
+<!--    <button type="submit">Upload</button>-->
+<!--</form>-->
+
+<!--&lt;!&ndash; Realtime upload progress label &ndash;&gt;-->
+<!--<div id="progressContainer" style="margin-top:12px; font-family:Arial, sans-serif;">-->
+<!--    <label for="uploadProgress"><strong>Upload progress:</strong></label>-->
+<!--    <span id="uploadProgress">0%</span>-->
+<!--</div>-->
+
+<!--<script>-->
+<!--    document.getElementById('uploadForm').addEventListener('submit', function(event) {-->
+<!--        event.preventDefault();-->
+
+<!--        // 1️⃣ CONNECT SSE FIRST-->
+<!--        const eventSource = new EventSource('/progress');-->
+
+<!--        eventSource.onmessage = function(event) {-->
+<!--            document.getElementById('uploadProgress').textContent = event.data;-->
+<!--        };-->
+
+<!--        eventSource.onerror = function(e) {-->
+<!--            console.error("SSE error", e);-->
+<!--        };-->
+
+<!--        // 2️⃣ START UPLOAD-->
+<!--        const fileInput = document.querySelector('input[type=file]');-->
+<!--        const formData = new FormData();-->
+<!--        formData.append("file", fileInput.files[0]);-->
+
+<!--        fetch('/upload', {-->
+<!--            method: 'POST',-->
+<!--            body: formData-->
+<!--        });-->
+<!--    });-->
+<!--</script>-->
+
+
+<!--</body>-->
+<!--</html>-->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>File Upload to S3</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 40px;
+        }
+
+        /* Progress bar container */
+        #progressContainer {
+            width: 300px;
+            height: 12px;
+            background: #e0e0e0;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 12px;
+            display: none; /* hidden until upload */
+        }
+
+        /* Actual animated line */
+        #progressBar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4caf50, #81c784);
+            transition: width 0.3s ease-in-out;
+        }
+
+        #progressText {
+            margin-top: 6px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
 
 <h2>Upload File to S3</h2>
 
-<form id="uploadForm" method="post" enctype="multipart/form-data" action="/upload">
-    <input type="file" name="file" required>
+<form id="uploadForm">
+    <input type="file" id="fileInput" required>
     <button type="submit">Upload</button>
 </form>
 
-<!-- Realtime upload progress label -->
-<div id="progressContainer" style="margin-top:12px; font-family:Arial, sans-serif;">
-    <label for="uploadProgress"><strong>Upload progress:</strong></label>
-    <span id="uploadProgress">0%</span>
+<!-- Animated progress bar -->
+<div id="progressContainer">
+    <div id="progressBar"></div>
 </div>
 
+<div id="progressText">0%</div>
+
 <script>
-const eventSource = new EventSource('/progress');
+    document.getElementById('uploadForm').addEventListener('submit', function(event) {
+        event.preventDefault();
 
-eventSource.onmessage = function(event) {
-    document.getElementById('uploadProgress').textContent = event.data;
-};
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files.length) return;
 
-eventSource.onerror = function(event) {
-    console.error('SSE error:', event);
-};
+        // 🔥 Show animation ONLY after clicking upload
+        document.getElementById('progressContainer').style.display = 'block';
+        document.getElementById('progressBar').style.width = '0%';
+        document.getElementById('progressText').textContent = '0%';
 
-document.getElementById('uploadForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const fileInput = form.querySelector('input[type=file]');
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) return;
+        // 1️⃣ Connect SSE first
+        const eventSource = new EventSource('/progress');
 
-    const formData = new FormData();
-    formData.append(fileInput.name, fileInput.files[0]);
+        eventSource.onmessage = function(event) {
+            const percent = parseInt(event.data.replace(/\D/g, ''));
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', form.action);
+            if (!isNaN(percent)) {
+                document.getElementById('progressBar').style.width = percent + '%';
+                document.getElementById('progressText').textContent = percent + '%';
+            }
 
-    xhr.onload = function() {
-        if (xhr.status >= 200 && xhr.status < 300) {
-            // Upload completed
-        } else {
-            document.getElementById('uploadProgress').textContent = 'Upload failed';
-        }
-    };
+            if (percent >= 100) {
+                eventSource.close();
+                document.getElementById('progressText').textContent = 'Upload Complete ✅';
+            }
+        };
 
-    xhr.onerror = function() {
-        document.getElementById('uploadProgress').textContent = 'Upload error';
-    };
+        eventSource.onerror = function(e) {
+            console.error('SSE error', e);
+        };
 
-    xhr.send(formData);
-});
+        // 2️⃣ Start upload
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        });
+    });
 </script>
 
 </body>
